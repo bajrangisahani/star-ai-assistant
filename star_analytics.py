@@ -84,6 +84,7 @@ def productivity_summary():
         done_tasks = conn.execute("SELECT COUNT(*) AS count FROM tasks WHERE status = 'done'").fetchone()["count"]
         open_reminders = conn.execute("SELECT COUNT(*) AS count FROM reminders WHERE status = 'open'").fetchone()["count"]
         done_reminders = conn.execute("SELECT COUNT(*) AS count FROM reminders WHERE status = 'done'").fetchone()["count"]
+        calendar_events = conn.execute("SELECT COUNT(*) AS count FROM calendar_events WHERE status = 'scheduled'").fetchone()["count"]
         active_automations = conn.execute("SELECT COUNT(*) AS count FROM automations WHERE status = 'active'").fetchone()["count"]
         automation_runs = conn.execute("SELECT COUNT(*) AS count FROM automation_runs").fetchone()["count"]
 
@@ -93,6 +94,7 @@ def productivity_summary():
         "done_tasks": done_tasks,
         "open_reminders": open_reminders,
         "done_reminders": done_reminders,
+        "calendar_events": calendar_events,
         "active_automations": active_automations,
         "automation_runs": automation_runs,
     }
@@ -143,6 +145,7 @@ def format_summary(summary):
         f"STAR has handled {commands['total_commands']} commands with "
         f"{commands['success_rate']} percent success. "
         f"There are {productivity['open_tasks']} open tasks, "
-        f"{productivity['open_reminders']} open reminders, and "
+        f"{productivity['open_reminders']} open reminders, "
+        f"{productivity['calendar_events']} calendar events, and "
         f"{productivity['active_automations']} active automations."
     )

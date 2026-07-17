@@ -22,6 +22,7 @@ STAR is a local voice assistant for Windows. It listens for the custom wake word
 - File search, file reading, file summary, and folder analysis.
 - Research search, latest news, weather lookup, Wikipedia-style lookup, and webpage summary.
 - Notes, tasks/to-do list, reminders, daily briefing, and Pomodoro timer.
+- Calendar events, today/tomorrow agenda, upcoming events, cancel, and delete.
 - Browser tab controls, Google/DuckDuckGo search, and file download helper.
 - Media controls for play/pause, next/previous, YouTube, Spotify, Netflix, and VLC.
 - WhatsApp chat search/send helpers through WhatsApp Web.
@@ -114,6 +115,12 @@ python wake_word.py
 - `remind me to drink water in 10 minutes`
 - `show reminders`
 - `daily briefing`
+- `add event dentist tomorrow at 5 pm for 30 minutes location clinic`
+- `today agenda`
+- `tomorrow agenda`
+- `upcoming events`
+- `cancel event 1`
+- `delete event 1`
 - `start pomodoro 25`
 - `pomodoro status`
 - `open website openai.com`
@@ -205,6 +212,13 @@ python wake_word.py
 - `GET /reminders` - list reminders.
 - `GET /reminders/due` - due reminders.
 - `GET /briefing` - daily briefing.
+- `POST /calendar/events?title=Meeting&starts_at=2026-07-18T09:00:00` - create a calendar event.
+- `POST /calendar/events/from-text?text=meeting tomorrow at 9 am` - create event from natural text.
+- `GET /calendar/events` - list calendar events.
+- `GET /calendar/upcoming` - upcoming calendar events.
+- `GET /calendar/agenda?day=today` - today or tomorrow agenda.
+- `POST /calendar/events/1/cancel` - cancel an event.
+- `DELETE /calendar/events/1` - delete an event.
 - `POST /pomodoro/start?minutes=25` - start Pomodoro.
 - `GET /pomodoro` - Pomodoro status.
 - `POST /browser/open?target=openai.com` - open website/search target.

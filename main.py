@@ -39,6 +39,7 @@ import star_security
 import star_analytics
 import star_vision
 import star_email
+import star_calendar
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -759,6 +760,48 @@ def handle_productivity_command(command):
     return None
 
 
+# ------------------- CALENDAR AGENT -------------------
+
+def handle_calendar_command(command):
+    text = command.strip()
+    lower_text = text.lower()
+
+    if lower_text in {"calendar", "calendar agenda", "show calendar", "show events", "list events", "upcoming events"}:
+        events = star_calendar.upcoming_events(limit=8)
+        return star_calendar.format_events(events, empty="No upcoming calendar events.")
+
+    if lower_text in {"today agenda", "agenda today", "today's agenda", "calendar today"}:
+        events = star_calendar.agenda("today")
+        return star_calendar.format_events(events, empty="No calendar events today.")
+
+    if lower_text in {"tomorrow agenda", "agenda tomorrow", "calendar tomorrow"}:
+        events = star_calendar.agenda("tomorrow")
+        return star_calendar.format_events(events, empty="No calendar events tomorrow.")
+
+    if lower_text.startswith(("add event", "create event", "schedule event", "calendar add")):
+        payload = text_after_any(text, ["add event", "create event", "schedule event", "calendar add"]).strip()
+        if not payload:
+            return "Tell me the event title and time."
+        result = star_calendar.create_event_from_text(payload)
+        if result.get("error"):
+            return result["error"]
+        return f"Event {result['id']} added for {result['starts_at'].strftime('%Y-%m-%d %H:%M')}."
+
+    if lower_text.startswith(("delete event", "remove event")):
+        event_id = first_number(text)
+        if not event_id:
+            return "Tell me the event number to delete."
+        return "Event deleted." if star_calendar.delete_event(event_id) else "Event not found."
+
+    if lower_text.startswith(("cancel event", "cancel calendar event")):
+        event_id = first_number(text)
+        if not event_id:
+            return "Tell me the event number to cancel."
+        return "Event cancelled." if star_calendar.cancel_event(event_id) else "Event not found."
+
+    return None
+
+
 # ------------------- BROWSER + MEDIA + MESSAGING -------------------
 
 def handle_browser_command(command):
@@ -1343,6 +1386,7 @@ TOOLS = {
     "analytics",
     "vision",
     "email",
+    "calendar",
     "none",
 }
 
@@ -1482,6 +1526,9 @@ def detect_tool_without_ai(user_text):
     if any(text.startswith(phrase) or text == phrase for phrase in git_phrases):
         return "git"
 
+    if text.startswith(("schedule event", "add event", "create event", "calendar add")):
+        return "calendar"
+
     automation_phrases = [
         "schedule command",
         "schedule ",
@@ -1566,6 +1613,32 @@ def detect_tool_without_ai(user_text):
     if any(text.startswith(phrase) or text == phrase for phrase in email_phrases):
         return "email"
 
+    calendar_phrases = [
+        "calendar",
+        "calendar agenda",
+        "show calendar",
+        "show events",
+        "list events",
+        "upcoming events",
+        "today agenda",
+        "agenda today",
+        "today's agenda",
+        "calendar today",
+        "tomorrow agenda",
+        "agenda tomorrow",
+        "calendar tomorrow",
+        "add event",
+        "create event",
+        "schedule event",
+        "calendar add",
+        "delete event",
+        "remove event",
+        "cancel event",
+        "cancel calendar event",
+    ]
+    if any(text.startswith(phrase) or text == phrase for phrase in calendar_phrases):
+        return "calendar"
+
     if text.startswith(("search", "google", "find")):
         return "search"
 
@@ -1623,6 +1696,7 @@ security
 analytics
 vision
 email
+calendar
 none
 
 Reply ONLY with one tool name.
@@ -1701,6 +1775,9 @@ def run_tool(tool, command):
 
     if tool == "email":
         return handle_email_command(command)
+
+    if tool == "calendar":
+        return handle_calendar_command(command)
 
     return None
 
@@ -2176,6 +2253,59 @@ def email_delete(message_id: str):
         return star_email.delete_email(message_id)
     except RuntimeError as exc:
         return {"error": str(exc), "status": "not_configured"}
+
+
+@app.post("/calendar/events")
+def calendar_create(title: str, starts_at: str, ends_at: Optional[str] = None, location: Optional[str] = None, notes: Optional[str] = None):
+    try:
+        start = datetime.datetime.fromisoformat(starts_at)
+        end = datetime.datetime.fromisoformat(ends_at) if ends_at else None
+    except ValueError:
+        return {"status": "invalid_datetime"}
+
+    event_id = star_calendar.add_event(title, start, ends_at=end, location=location, notes=notes)
+    return {"status": "saved" if event_id else "ignored", "id": event_id}
+
+
+@app.post("/calendar/events/from-text")
+def calendar_create_from_text(text: str):
+    result = star_calendar.create_event_from_text(text)
+    if result.get("error"):
+        return {"status": "invalid_event", "error": result["error"]}
+    return {
+        "status": "saved",
+        "id": result["id"],
+        "title": result["title"],
+        "starts_at": result["starts_at"].isoformat(),
+        "ends_at": result["ends_at"].isoformat(),
+        "location": result["location"],
+    }
+
+
+@app.get("/calendar/events")
+def calendar_events(limit: int = 20, status: str = "scheduled"):
+    return {"items": star_calendar.list_events(limit=limit, status=status)}
+
+
+@app.get("/calendar/upcoming")
+def calendar_upcoming(limit: int = 10):
+    return {"items": star_calendar.upcoming_events(limit=limit)}
+
+
+@app.get("/calendar/agenda")
+def calendar_agenda(day: str = "today"):
+    clean_day = "tomorrow" if day.lower() == "tomorrow" else "today"
+    return {"items": star_calendar.agenda(clean_day)}
+
+
+@app.post("/calendar/events/{event_id}/cancel")
+def calendar_cancel(event_id: int):
+    return {"status": "cancelled" if star_calendar.cancel_event(event_id) else "not_found", "id": event_id}
+
+
+@app.delete("/calendar/events/{event_id}")
+def calendar_delete(event_id: int):
+    return {"status": "deleted" if star_calendar.delete_event(event_id) else "not_found", "id": event_id}
 
 
 @app.get("/files/search")
