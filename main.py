@@ -47,6 +47,7 @@ import star_health
 import star_integrations
 import star_language
 import star_suggestions
+import star_voice
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -126,9 +127,15 @@ def speak(text):
         current_process.terminate()
 
     try:
+        voice_settings = star_voice.get_settings()
+        speaker_env = os.environ.copy()
+        speaker_env["STAR_TTS_VOICE"] = voice_settings.get("tts_voice", "en-US-GuyNeural")
+        speaker_env["STAR_TTS_RATE"] = voice_settings.get("tts_rate", "+5%")
+        speaker_env["STAR_TTS_PITCH"] = voice_settings.get("tts_pitch", "+0Hz")
         current_process = subprocess.Popen(
             [sys.executable, str(SPEAKER_FILE), str(text)],
             cwd=str(BASE_DIR),
+            env=speaker_env,
         )
         return True
     except Exception as exc:
@@ -426,16 +433,17 @@ def clear_pending_confirmation():
 
 def handle_confirmation_command(command):
     global PENDING_CONFIRMATION
-    text = command.lower().strip()
+    intent = star_voice.confirmation_intent(command)
+    text = (intent or command).lower().strip()
 
-    if text in {"cancel", "cancel it", "no", "do not", "don't"}:
+    if text == "cancel":
         if PENDING_CONFIRMATION:
             star_security.audit("confirmation_cancelled", "info", {"action": PENDING_CONFIRMATION["action"]})
             clear_pending_confirmation()
             return "Cancelled."
         return None
 
-    if text not in {"confirm", "yes", "do it", "continue", "proceed"}:
+    if text != "confirm":
         return None
 
     if not PENDING_CONFIRMATION:
@@ -1389,6 +1397,36 @@ def handle_integrations_command(command):
     return None
 
 
+# ------------------- VOICE AGENT -------------------
+
+def handle_voice_command(command):
+    parsed = star_voice.parse_voice_command(command)
+    if not parsed:
+        return None
+
+    action = parsed["action"]
+    if action == "status":
+        return star_voice.format_settings()
+
+    if action == "repeat":
+        last = star_voice.last_voice_state().get("last_reply")
+        if not last:
+            return "I do not have a voice reply to repeat yet."
+        speak(last)
+        return last
+
+    if action == "set":
+        updates = {key: value for key, value in parsed.items() if key.startswith("voice_") and value}
+        if not updates:
+            return "Tell me which voice setting to change."
+        changed = star_voice.update_settings(**updates)
+        if not changed:
+            return "I could not update that voice setting."
+        return "Voice settings updated. " + star_voice.format_settings()
+
+    return None
+
+
 # ------------------- CODING + GIT AGENTS -------------------
 
 def handle_coding_command(command):
@@ -1756,12 +1794,35 @@ TOOLS = {
     "health",
     "suggestions",
     "integrations",
+    "voice",
     "none",
 }
 
 
 def detect_tool_without_ai(user_text):
     text = user_text.lower().strip()
+
+    voice_phrases = [
+        "voice status",
+        "voice settings",
+        "listening status",
+        "speech status",
+        "voice language",
+        "set voice language",
+        "speech language",
+        "voice mode",
+        "set voice mode",
+        "hindi mode",
+        "hinglish mode",
+        "english mode",
+        "repeat",
+        "repeat that",
+        "dobara bolo",
+        "fir se bolo",
+        "phir se bolo",
+    ]
+    if any(text.startswith(phrase) or text == phrase for phrase in voice_phrases):
+        return "voice"
 
     if any(phrase in text for phrase in ["search files", "find files", "find file", "file search", "read file", "summarize file", "summary of file", "analyze folder", "folder analysis", "analyse folder"]):
         return "file"
@@ -2209,6 +2270,7 @@ finance
 health
 suggestions
 integrations
+voice
 none
 
 Reply ONLY with one tool name.
@@ -2308,6 +2370,9 @@ def run_tool(tool, command):
 
     if tool == "integrations":
         return handle_integrations_command(command)
+
+    if tool == "voice":
+        return handle_voice_command(command)
 
     return None
 
@@ -2464,6 +2529,7 @@ def check_direct_memory(user_text):
 def record_interaction(user_text, tool, status, reply):
     storage.add_command(user_text, tool, status, reply)
     storage.add_conversation("assistant", reply)
+    star_voice.remember_interaction(user_text, reply)
     storage.add_log(
         "info" if status == "ok" else "warning",
         "command_handled",
@@ -2512,6 +2578,8 @@ def ask_star(user_text):
         else:
             tool_reply = run_tool(tool, action_text)
         if tool_reply:
+            if PENDING_CONFIRMATION and star_voice.parse_bool(star_voice.get_settings().get("voice_spoken_confirmations")):
+                speak(tool_reply)
             return record_interaction(text, tool, "ok", tool_reply)
 
     extract_memory(text)
@@ -2645,7 +2713,77 @@ def settings():
         "speaker_file_exists": SPEAKER_FILE.exists(),
         "pending_confirmation": PENDING_CONFIRMATION["description"] if PENDING_CONFIRMATION else None,
         "security_mode": star_security.get_mode(),
+        "voice": star_voice.get_settings(),
     }
+
+
+@app.get("/voice/status")
+def voice_status():
+    return {
+        "settings": star_voice.get_settings(),
+        "recognition_languages": star_voice.recognition_languages(),
+        "last": star_voice.last_voice_state(),
+        "pending_confirmation": PENDING_CONFIRMATION["description"] if PENDING_CONFIRMATION else None,
+    }
+
+
+@app.get("/voice/settings")
+def voice_get_settings():
+    settings_data = star_voice.get_settings()
+    return {
+        "settings": settings_data,
+        "recognition_languages": star_voice.recognition_languages(settings_data),
+    }
+
+
+@app.post("/voice/settings")
+def voice_update_settings(
+    mode: Optional[str] = None,
+    language: Optional[str] = None,
+    primary_language: Optional[str] = None,
+    timeout: Optional[float] = None,
+    phrase_time_limit: Optional[float] = None,
+    pause_threshold: Optional[float] = None,
+    energy_threshold: Optional[int] = None,
+    spoken_confirmations: Optional[bool] = None,
+    tts_voice: Optional[str] = None,
+    tts_rate: Optional[str] = None,
+    tts_pitch: Optional[str] = None,
+):
+    changed = star_voice.update_settings(
+        voice_mode=mode,
+        voice_language=language,
+        voice_primary_language=primary_language,
+        voice_timeout=timeout,
+        voice_phrase_time_limit=phrase_time_limit,
+        voice_pause_threshold=pause_threshold,
+        voice_energy_threshold=energy_threshold,
+        voice_spoken_confirmations=spoken_confirmations,
+        tts_voice=tts_voice,
+        tts_rate=tts_rate,
+        tts_pitch=tts_pitch,
+    )
+    settings_data = star_voice.get_settings()
+    return {
+        "updated": changed,
+        "settings": settings_data,
+        "recognition_languages": star_voice.recognition_languages(settings_data),
+    }
+
+
+@app.post("/voice/remember")
+def voice_remember(command: str, reply: str = ""):
+    star_voice.remember_interaction(command, reply)
+    return {"status": "saved", **star_voice.last_voice_state()}
+
+
+@app.post("/voice/repeat")
+def voice_repeat(speak_out: bool = True):
+    last = star_voice.last_voice_state()
+    reply = last.get("last_reply") or "I do not have a voice reply to repeat yet."
+    if speak_out and last.get("last_reply"):
+        speak(reply)
+    return {"reply": reply, "spoken": bool(speak_out and last.get("last_reply"))}
 
 
 @app.get("/system")

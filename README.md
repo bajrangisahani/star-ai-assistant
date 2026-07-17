@@ -6,7 +6,8 @@ STAR is a local voice assistant for Windows. It listens for the custom wake word
 
 - Wake word activation with Picovoice Porcupine.
 - Continuous speech recognition after wake word detection.
-- FastAPI backend with `/ask-star`, `/memory`, `/history`, `/commands`, `/logs`, `/settings`, `/stop`, and `/health`.
+- Voice brain settings for language fallback, listening timeout, phrase length, TTS voice/rate/pitch, repeat, stop, sleep, and spoken confirmation shortcuts.
+- FastAPI backend with `/ask-star`, `/voice/status`, `/voice/settings`, `/memory`, `/history`, `/commands`, `/logs`, `/settings`, `/stop`, and `/health`.
 - Web dashboard at `/dashboard` with chat, status, memory, tasks, reminders, logs, and command history.
 - Groq-powered assistant replies and action planning.
 - Edge TTS voice output.
@@ -28,6 +29,7 @@ STAR is a local voice assistant for Windows. It listens for the custom wake word
 - Finance tracker for income, expenses, category breakdowns, monthly balance, and transaction history.
 - Health and habit tracker for water, mood, sleep, workout, weight, and daily wellness summaries.
 - Multilingual command normalization for Hinglish/Hindi/local phrases, with optional Groq-powered command translation.
+- Hinglish-friendly voice cleanup for common misheard words such as confirm/cancel, plus English/Hindi recognition fallback.
 - Self-learning smart suggestions from usage patterns, tasks, reminders, health, finance, and recent errors.
 - Cloud/mobile/smart-home foundation with local cloud snapshots, mobile notification queue, integration registry, and Home Assistant hooks.
 - Browser tab controls, Google/DuckDuckGo search, and file download helper.
@@ -169,6 +171,16 @@ python wake_word.py
 - `mobile notifications`
 - `smart home status`
 - `smart home turn on light.kitchen` then `confirm` or `cancel`
+- `voice status`
+- `voice language hindi`
+- `voice language hinglish`
+- `voice language english`
+- `repeat`
+- `dobara bolo`
+- `stop`
+- `sleep`
+- `haan` or `kar de` for confirmation
+- `nahi` or `mat kar` to cancel confirmation
 - `start pomodoro 25`
 - `pomodoro status`
 - `open website openai.com`

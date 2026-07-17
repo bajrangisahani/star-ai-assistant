@@ -4,18 +4,23 @@ import sys
 import tempfile
 
 import edge_tts
+from dotenv import load_dotenv
 from playsound import playsound
 
 
-VOICE = "en-US-GuyNeural"
+load_dotenv()
+
+VOICE = os.getenv("STAR_TTS_VOICE", "en-US-GuyNeural")
+RATE = os.getenv("STAR_TTS_RATE", "+5%")
+PITCH = os.getenv("STAR_TTS_PITCH", "+0Hz")
 
 
 async def make_audio(text, output_path):
     communicate = edge_tts.Communicate(
         text,
         voice=VOICE,
-        rate="+5%",
-        pitch="+0Hz",
+        rate=RATE,
+        pitch=PITCH,
     )
     await communicate.save(output_path)
 
