@@ -30,6 +30,7 @@ function renderSettings(settings) {
   const rows = [
     ["Groq", settings.groq_configured ? "ready" : "missing"],
     ["Picovoice", settings.picovoice_configured ? "ready" : "missing"],
+    ["Security", settings.security_mode || "normal"],
     ["Pending", settings.pending_confirmation || "none"],
   ];
 

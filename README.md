@@ -28,6 +28,7 @@ STAR is a local voice assistant for Windows. It listens for the custom wake word
 - Coding helper for project analysis, code search, explain/review file, and Python compile checks.
 - Git helper for status, log, diff, branch, remotes, and confirmed commit/pull/push.
 - Smart automation for scheduled commands, simple workflows, due runs, and automation history.
+- Security mode, permission checks, confirmation gates, secret health, and audit logs.
 - Google search command support.
 - Basic WhatsApp Web and Instagram DM automation through Selenium.
 
@@ -142,6 +143,11 @@ python wake_word.py
 - `pause automation 1`
 - `resume automation 1`
 - `delete automation 1`
+- `security status`
+- `security mode strict`
+- `security mode normal`
+- `check permission send whatsapp to Bajrangi message hello`
+- `audit logs`
 - `check whatsapp`
 
 ## API Helpers
@@ -207,6 +213,10 @@ python wake_word.py
 - `POST /automations/1/resume` - resume automation.
 - `DELETE /automations/1` - delete automation.
 - `GET /automations/runs` - automation run history.
+- `GET /security` - security and secret configuration status.
+- `POST /security/mode?mode=strict` - set security mode.
+- `GET /security/check?command=send whatsapp message` - classify command risk.
+- `GET /security/audit` - security audit logs.
 - `POST /confirm` - confirm a pending risky action.
 - `POST /cancel` - cancel a pending risky action.
 
@@ -217,4 +227,5 @@ python wake_word.py
 - If `star_memory.json` exists from an older version, STAR imports it into SQLite on startup.
 - PDF reading needs `pypdf` or `PyPDF2`; OCR will need an OCR engine in a later batch.
 - WhatsApp send/search requires WhatsApp Web login and may need selector updates if WhatsApp changes its UI.
+- Security modes: `relaxed` confirms only highest-risk actions, `normal` confirms messaging/download/automation/power/git write actions, and `strict` confirms every recognized risky action.
 - Keep `.env` private.

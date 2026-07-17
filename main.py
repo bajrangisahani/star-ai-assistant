@@ -35,6 +35,7 @@ import star_whatsapp
 import star_coding
 import star_git
 import star_automation
+import star_security
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -418,6 +419,7 @@ def handle_confirmation_command(command):
 
     if text in {"cancel", "cancel it", "no", "do not", "don't"}:
         if PENDING_CONFIRMATION:
+            star_security.audit("confirmation_cancelled", "info", {"action": PENDING_CONFIRMATION["action"]})
             clear_pending_confirmation()
             return "Cancelled."
         return None
@@ -432,6 +434,7 @@ def handle_confirmation_command(command):
     clear_pending_confirmation()
 
     try:
+        star_security.audit("confirmation_approved", "warning", {"action": pending["action"]})
         return pending["callback"]()
     except Exception as exc:
         storage.add_log("error", "confirmed_action_failed", {"action": pending["action"], "error": str(exc)})
@@ -1066,6 +1069,55 @@ def handle_automation_command(command):
     return None
 
 
+# ------------------- SECURITY AGENT -------------------
+
+def handle_security_command(command):
+    text = command.strip()
+    lower_text = text.lower()
+
+    if lower_text in {"security status", "privacy status", "api key status"}:
+        return star_security.format_security_status(star_security.security_status(BASE_DIR))
+
+    if lower_text.startswith("security mode"):
+        mode = text_after_any(text, ["security mode"]).strip().lower()
+        if not mode:
+            return f"Security mode is {star_security.get_mode()}."
+        if star_security.set_mode(mode):
+            return f"Security mode set to {mode}."
+        return "Use security mode relaxed, normal, or strict."
+
+    if lower_text in {"audit logs", "security logs"}:
+        logs = [item for item in storage.list_logs(limit=20) if item["event"].startswith("security_")]
+        if not logs:
+            return "No security audit logs found."
+        return "Audit logs: " + ", ".join(f"{item['event']} at {item['created_at']}" for item in logs[:6]) + "."
+
+    if lower_text.startswith("check permission"):
+        target = text_after_any(text, ["check permission"]).strip()
+        if not target:
+            return "Tell me which command to check."
+        result = star_security.classify_command(target)
+        if result["requires_confirmation"]:
+            return f"That command needs confirmation. Categories: {', '.join(result['categories'])}."
+        return f"That command is {result['risk']}."
+
+    return None
+
+
+def security_gate(command, tool, callback):
+    result = star_security.classify_command(command, tool=tool)
+    if not result["requires_confirmation"]:
+        return callback()
+
+    categories = ", ".join(result["categories"])
+    star_security.audit("confirmation_required", "warning", {"command": command, "tool": tool, "categories": result["categories"]})
+    return set_pending_confirmation(
+        f"secure_{tool}",
+        f"Security confirmation required for {categories}",
+        callback,
+    )
+
+
 # ------------------- ACTION ROUTING -------------------
 
 TOOLS = {
@@ -1084,6 +1136,7 @@ TOOLS = {
     "coding",
     "git",
     "automation",
+    "security",
     "none",
 }
 
@@ -1240,6 +1293,18 @@ def detect_tool_without_ai(user_text):
     if any(text.startswith(phrase) or text == phrase.strip() for phrase in automation_phrases):
         return "automation"
 
+    security_phrases = [
+        "security status",
+        "privacy status",
+        "api key status",
+        "security mode",
+        "audit logs",
+        "security logs",
+        "check permission",
+    ]
+    if any(text.startswith(phrase) or text == phrase for phrase in security_phrases):
+        return "security"
+
     if text.startswith(("search", "google", "find")):
         return "search"
 
@@ -1293,6 +1358,7 @@ media
 coding
 git
 automation
+security
 none
 
 Reply ONLY with one tool name.
@@ -1359,6 +1425,9 @@ def run_tool(tool, command):
 
     if tool == "automation":
         return handle_automation_command(command)
+
+    if tool == "security":
+        return handle_security_command(command)
 
     return None
 
@@ -1537,7 +1606,13 @@ def ask_star(user_text):
         speak(confirmation_reply)
         return record_interaction(text, "confirmation", "ok", confirmation_reply)
 
-    memory_reply = handle_memory_command(text)
+    memory_callback = lambda: handle_memory_command(text)
+    if star_security.classify_command(text)["requires_confirmation"] and any(
+        category == "memory_clear" for category in star_security.classify_command(text)["categories"]
+    ):
+        memory_reply = security_gate(text, "memory", memory_callback)
+    else:
+        memory_reply = memory_callback()
     if memory_reply:
         speak(memory_reply)
         return record_interaction(text, "memory", "ok", memory_reply)
@@ -1547,7 +1622,10 @@ def ask_star(user_text):
 
     tool = agent_brain(text)
     if tool != "none":
-        tool_reply = run_tool(tool, text)
+        if tool in {"whatsapp", "browser", "automation"}:
+            tool_reply = security_gate(text, tool, lambda: run_tool(tool, text))
+        else:
+            tool_reply = run_tool(tool, text)
         if tool_reply:
             return record_interaction(text, tool, "ok", tool_reply)
 
@@ -1680,6 +1758,7 @@ def settings():
         "wake_word_file_exists": (BASE_DIR / "Hello-STAR_en_windows_v4_0_0.ppn").exists(),
         "speaker_file_exists": SPEAKER_FILE.exists(),
         "pending_confirmation": PENDING_CONFIRMATION["description"] if PENDING_CONFIRMATION else None,
+        "security_mode": star_security.get_mode(),
     }
 
 
@@ -1696,6 +1775,28 @@ def system_processes(limit: int = 25):
 @app.get("/system/apps")
 def system_apps(limit: int = 100):
     return {"items": star_system.list_installed_apps(APP_DATABASE, limit=limit)}
+
+
+@app.get("/security")
+def security_get_status():
+    return star_security.security_status(BASE_DIR)
+
+
+@app.post("/security/mode")
+def security_set_mode(mode: str):
+    changed = star_security.set_mode(mode)
+    return {"status": "updated" if changed else "invalid_mode", "mode": star_security.get_mode()}
+
+
+@app.get("/security/check")
+def security_check(command: str, tool: Optional[str] = None):
+    return star_security.classify_command(command, tool=tool)
+
+
+@app.get("/security/audit")
+def security_audit(limit: int = 50):
+    items = [item for item in storage.list_logs(limit=limit) if item["event"].startswith("security_")]
+    return {"items": items}
 
 
 @app.get("/files/search")
@@ -2065,5 +2166,6 @@ def health():
         "groq_configured": bool(client),
         "picovoice_configured": bool(os.getenv("PICOVOICE_ACCESS_KEY")),
         "pending_confirmation": bool(PENDING_CONFIRMATION),
+        "security_mode": star_security.get_mode(),
         **stats,
     }

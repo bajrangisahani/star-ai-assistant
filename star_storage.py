@@ -107,6 +107,12 @@ def init_db():
                 FOREIGN KEY (automation_id) REFERENCES automations(id)
             );
 
+            CREATE TABLE IF NOT EXISTS settings (
+                key TEXT PRIMARY KEY,
+                value TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            );
+
             CREATE INDEX IF NOT EXISTS idx_memory_category ON memory(category);
             CREATE INDEX IF NOT EXISTS idx_conversations_created ON conversations(created_at);
             CREATE INDEX IF NOT EXISTS idx_commands_created ON commands(created_at);
@@ -301,6 +307,33 @@ def get_stats():
         "open_reminders": open_reminder_count,
         "active_automations": active_automation_count,
     }
+
+
+def get_setting(key, default=None):
+    with connect() as conn:
+        row = conn.execute("SELECT value FROM settings WHERE key = ?", (key,)).fetchone()
+    return row["value"] if row else default
+
+
+def set_setting(key, value):
+    with connect() as conn:
+        conn.execute(
+            """
+            INSERT INTO settings(key, value, updated_at)
+            VALUES (?, ?, ?)
+            ON CONFLICT(key) DO UPDATE SET
+                value = excluded.value,
+                updated_at = excluded.updated_at
+            """,
+            (key, str(value), utc_now()),
+        )
+    add_log("info", "setting_updated", {"key": key})
+
+
+def list_settings():
+    with connect() as conn:
+        rows = conn.execute("SELECT * FROM settings ORDER BY key").fetchall()
+    return [row_to_dict(row) for row in rows]
 
 
 def normalize_key(key):
