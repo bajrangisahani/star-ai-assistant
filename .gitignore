@@ -1,0 +1,9 @@
+.env
+__pycache__/
+*.py[cod]
+venv/
+star_memory.json
+star.db
+star.db-*
+screenshot_*.png
+voice.mp3

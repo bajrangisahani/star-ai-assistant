@@ -1,0 +1,15 @@
+ddgs==9.11.2
+edge-tts==7.2.7
+fastapi==0.135.1
+groq==1.0.0
+playsound==1.2.2
+psutil==7.2.2
+pvporcupine==4.0.2
+PyAudio==0.2.14
+PyAutoGUI==0.9.54
+python-dotenv==1.2.2
+requests==2.32.5
+selenium==4.41.0
+SpeechRecognition==3.14.5
+uvicorn==0.41.0
+webdriver-manager==4.0.2
