@@ -52,12 +52,22 @@ export MOBILE_SHARED_SECRET="same_secret_here"
 ## STAR Commands
 
 - `phone status`
+- `phone find`
 - `phone vibrate`
 - `phone speak hello bhai`
 - `phone toast done bhai`
 - `phone battery`
+- `phone device info`
 - `phone location`
 - `phone wifi`
+- `phone volume`
+- `phone volume 10`
+- `phone volume max`
+- `phone brightness 180`
+- `phone brightness auto`
+- `phone media play pause`
+- `phone media next`
+- `phone media previous`
 - `phone torch on`
 - `phone torch off`
 - `phone clipboard set hello`

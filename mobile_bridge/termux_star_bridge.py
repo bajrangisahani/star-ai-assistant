@@ -31,6 +31,12 @@ CAPABILITIES = [
     "clipboard_get",
     "location",
     "wifi_connection",
+    "volume_status",
+    "volume_set",
+    "brightness",
+    "media_key",
+    "device_info",
+    "find_phone",
 ]
 
 
@@ -67,6 +73,19 @@ def run_command(args, timeout=20):
         "stdout": completed.stdout[-500:],
         "stderr": completed.stderr[-500:],
     }
+
+
+def run_steps(steps):
+    results = []
+    final_status = "done"
+    for args in steps:
+        result = run_command(args)
+        results.append({"args": args, "result": result})
+        if result.get("status") == "error":
+            final_status = "error"
+        elif result.get("status") == "skipped" and final_status != "error":
+            final_status = "skipped"
+    return {"status": final_status, "steps": results}
 
 
 def safe_url(value):
@@ -149,6 +168,48 @@ def execute_action(action):
 
     if kind == "wifi_connection":
         return run_command(["termux-wifi-connectioninfo"])
+
+    if kind == "volume_status":
+        return run_command(["termux-volume"])
+
+    if kind == "volume_set":
+        stream = str(payload.get("stream") or "music").lower()
+        level = str(int(payload.get("level") or 10))
+        return run_command(["termux-volume", stream, level])
+
+    if kind == "brightness":
+        value = str(payload.get("value") or "auto").lower()
+        if value != "auto":
+            value = str(max(0, min(255, int(float(value)))))
+        return run_command(["termux-brightness", value])
+
+    if kind == "media_key":
+        key = str(payload.get("key") or "play_pause").lower()
+        keycodes = {
+            "play_pause": "85",
+            "play": "126",
+            "pause": "127",
+            "next": "87",
+            "previous": "88",
+            "prev": "88",
+            "stop": "86",
+        }
+        keycode = keycodes.get(key, "85")
+        return run_command(["input", "keyevent", keycode])
+
+    if kind == "device_info":
+        return run_command(["termux-telephony-deviceinfo"])
+
+    if kind == "find_phone":
+        message = str(payload.get("message") or "STAR found your phone.")
+        return run_steps(
+            [
+                ["termux-volume", "music", str(int(payload.get("volume") or 15))],
+                ["termux-vibrate", "-d", str(int(payload.get("duration_ms") or 1200))],
+                ["termux-tts-speak", message],
+                ["termux-toast", message],
+            ]
+        )
 
     return {"status": "skipped", "message": f"unknown action {kind}"}
 

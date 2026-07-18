@@ -1602,17 +1602,67 @@ def parse_phone_action_command(command):
     if lower_text in {"phone status", "mobile bridge status", "phone bridge status", "android status"}:
         return star_integrations.format_mobile_bridge_status()
 
+    if lower_text in {"phone find", "find phone", "find my phone", "mobile find", "find mobile"}:
+        return queue_phone_action_reply("find_phone", {"message": "Bhai, phone yahin hai.", "volume": 15, "duration_ms": 1200})
+
     if lower_text in {"phone vibrate", "mobile vibrate", "vibrate phone"}:
         return queue_phone_action_reply("vibrate", {"duration_ms": 700})
 
     if lower_text in {"phone battery", "mobile battery", "phone battery status", "mobile battery status"}:
         return queue_phone_action_reply("battery")
 
+    if lower_text in {"phone device info", "mobile device info", "phone info", "mobile info"}:
+        return queue_phone_action_reply("device_info")
+
     if lower_text in {"phone location", "mobile location", "phone where are you", "mobile where are you"}:
         return queue_phone_action_reply("location", {"provider": "network"})
 
     if lower_text in {"phone wifi", "mobile wifi", "phone wifi status", "mobile wifi status"}:
         return queue_phone_action_reply("wifi_connection")
+
+    if lower_text in {"phone volume", "mobile volume", "phone volume status", "mobile volume status"}:
+        return queue_phone_action_reply("volume_status")
+
+    if lower_text in {"phone volume max", "mobile volume max", "phone full volume", "mobile full volume"}:
+        return queue_phone_action_reply("volume_set", {"stream": "music", "level": 15})
+
+    if lower_text.startswith(("phone volume", "mobile volume")):
+        payload = text_after_any(text, ["phone volume", "mobile volume"]).strip()
+        try:
+            level = max(0, min(15, int(float(payload))))
+        except ValueError:
+            return "Use: phone volume 10, or phone volume max."
+        return queue_phone_action_reply("volume_set", {"stream": "music", "level": level})
+
+    if lower_text in {"phone brightness auto", "mobile brightness auto"}:
+        return queue_phone_action_reply("brightness", {"value": "auto"})
+
+    if lower_text.startswith(("phone brightness", "mobile brightness")):
+        payload = text_after_any(text, ["phone brightness", "mobile brightness"]).strip()
+        try:
+            value = max(0, min(255, int(float(payload))))
+        except ValueError:
+            return "Use: phone brightness 180, or phone brightness auto."
+        return queue_phone_action_reply("brightness", {"value": value})
+
+    media_map = {
+        "phone media play": "play",
+        "mobile media play": "play",
+        "phone media pause": "pause",
+        "mobile media pause": "pause",
+        "phone media stop": "stop",
+        "mobile media stop": "stop",
+        "phone media next": "next",
+        "mobile media next": "next",
+        "phone media previous": "previous",
+        "mobile media previous": "previous",
+        "phone media prev": "previous",
+        "mobile media prev": "previous",
+        "phone media play pause": "play_pause",
+        "mobile media play pause": "play_pause",
+    }
+    if lower_text in media_map:
+        return queue_phone_action_reply("media_key", {"key": media_map[lower_text]})
 
     if lower_text in {"phone torch on", "mobile torch on", "phone flashlight on", "mobile flashlight on"}:
         return queue_phone_action_reply("torch", {"state": "on"})
@@ -2555,6 +2605,11 @@ def detect_tool_without_ai(user_text):
         "mobile bridge status",
         "phone bridge status",
         "android status",
+        "phone find",
+        "find phone",
+        "find my phone",
+        "mobile find",
+        "find mobile",
         "smart home status",
         "cloud sync",
         "cloud sync now",
@@ -2570,6 +2625,10 @@ def detect_tool_without_ai(user_text):
         "mobile battery",
         "phone battery status",
         "mobile battery status",
+        "phone device info",
+        "mobile device info",
+        "phone info",
+        "mobile info",
         "phone location",
         "mobile location",
         "phone where are you",
@@ -2578,6 +2637,30 @@ def detect_tool_without_ai(user_text):
         "mobile wifi",
         "phone wifi status",
         "mobile wifi status",
+        "phone volume",
+        "mobile volume",
+        "phone volume status",
+        "mobile volume status",
+        "phone volume max",
+        "mobile volume max",
+        "phone full volume",
+        "mobile full volume",
+        "phone brightness",
+        "mobile brightness",
+        "phone media play",
+        "mobile media play",
+        "phone media pause",
+        "mobile media pause",
+        "phone media stop",
+        "mobile media stop",
+        "phone media next",
+        "mobile media next",
+        "phone media previous",
+        "mobile media previous",
+        "phone media prev",
+        "mobile media prev",
+        "phone media play pause",
+        "mobile media play pause",
         "phone torch on",
         "mobile torch on",
         "phone flashlight on",

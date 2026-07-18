@@ -288,16 +288,23 @@ function phonePayloadForAction(action, value) {
   if (action === "open_url") return { url: textValue || "https://google.com" };
   if (action === "share_text") return { text: textValue || "Shared from STAR" };
   if (action === "toast") return { text: textValue || "STAR phone toast" };
+  if (action === "find_phone") return { message: textValue || "Bhai, phone yahin hai.", volume: 15, duration_ms: 1200 };
+  if (action === "volume_set") return { stream: "music", level: Math.max(0, Math.min(15, Number.parseInt(textValue || "10", 10))) };
+  if (action === "brightness") return { value: textValue.toLowerCase() === "auto" ? "auto" : Math.max(0, Math.min(255, Number.parseInt(textValue || "180", 10))) };
+  if (action === "media_play_pause") return { key: "play_pause" };
+  if (action === "media_next") return { key: "next" };
+  if (action === "media_previous") return { key: "previous" };
   if (action === "torch_on") return { state: "on" };
   if (action === "torch_off") return { state: "off" };
   if (action === "clipboard_set") return { text: textValue || "Copied from STAR" };
   if (action === "location") return { provider: "network" };
-  if (action === "battery" || action === "clipboard_get" || action === "wifi_connection") return {};
+  if (action === "battery" || action === "clipboard_get" || action === "wifi_connection" || action === "volume_status" || action === "device_info") return {};
   return { duration_ms: 700 };
 }
 
 function phoneBackendAction(action) {
   if (action === "torch_on" || action === "torch_off") return "torch";
+  if (action.startsWith("media_")) return "media_key";
   return action;
 }
 
