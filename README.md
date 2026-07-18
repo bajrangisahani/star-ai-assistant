@@ -112,7 +112,8 @@ Useful runtime scripts:
 Voice behavior:
 
 - `stop` stops STAR's current speech only. It does not stop the server.
-- `sleep` exits conversation mode and keeps wake-word listening alive.
+- `star abhi chup`, `star band ho ja`, or `star sleep` puts STAR in quiet mode. It keeps listening, but ignores normal conversation.
+- `ok star you can talk`, `ok sar u can talk`, or `chal star tu ab baat kar sakta hai` resumes replies.
 - `stop server`, `close backend`, and similar commands are blocked from voice so the server stays on.
 - To fully stop STAR manually, use `.\scripts\stop_star.ps1`.
 - If Picovoice fails or no key is configured, STAR falls back to free keyless speech wake mode.

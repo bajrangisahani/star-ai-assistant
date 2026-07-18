@@ -48,12 +48,13 @@ function statusPill(label, ok) {
 }
 
 function renderSettings(settings) {
+  const voiceState = checked(settings.voice?.voice_quiet) ? "quiet" : settings.voice?.voice_language || "auto";
   const rows = [
     ["Groq", settings.groq_configured ? "ready" : "missing"],
     ["Picovoice", settings.picovoice_configured ? "ready" : "missing"],
     ["Email", settings.email_configured ? "ready" : "missing"],
     ["Security", settings.security_mode || "normal"],
-    ["Voice", settings.voice?.voice_language || "auto"],
+    ["Voice", voiceState],
     ["Pending", settings.pending_confirmation || "none"],
   ];
 
@@ -254,6 +255,7 @@ function renderVoice(voice) {
 
   const items = [
     ["Mode", settings.voice_mode || "conversation"],
+    ["Quiet", checked(settings.voice_quiet) ? "on" : "off"],
     ["Wake", settings.wake_engine || "auto"],
     ["Language", settings.voice_language || "auto"],
     ["Fallback", (voice.recognition_languages || []).join(", ") || "en-IN, hi-IN, en-US"],
@@ -459,6 +461,17 @@ function bindEvents() {
 
   $("#repeatVoiceBtn").addEventListener("click", async () => {
     const result = await api("/voice/repeat", { method: "POST" });
+    addMessage("assistant", result.reply || "");
+    await refreshAll();
+  });
+
+  $("#voiceQuietBtn").addEventListener("click", async () => {
+    await api("/voice/quiet", { method: "POST" });
+    await refreshAll();
+  });
+
+  $("#voiceResumeBtn").addEventListener("click", async () => {
+    const result = await api("/voice/resume", { method: "POST" });
     addMessage("assistant", result.reply || "");
     await refreshAll();
   });

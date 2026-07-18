@@ -12,8 +12,9 @@ DEFAULT_SETTINGS = {
     "voice_pause_threshold": "0.8",
     "voice_energy_threshold": "300",
     "voice_spoken_confirmations": "true",
+    "voice_quiet": "false",
     "wake_engine": "auto",
-    "wake_phrases": "hello star,hey star,star,sitar,sitara",
+    "wake_phrases": "hello star,hey star,ok star,okay star,chal star,star,sitar,sitara,ok sar,ok sir",
     "tts_voice": "en-US-JennyNeural",
     "tts_rate": "+5%",
     "tts_pitch": "+0Hz",
@@ -105,6 +106,39 @@ STOP_SPEAKING_WORDS = {
     "bolna band",
 }
 
+QUIET_WORDS = {
+    "abhi chup",
+    "chup hoja",
+    "chup ho ja",
+    "band hoja",
+    "band ho ja",
+    "sleep",
+    "so ja",
+    "quiet",
+    "be quiet",
+    "stop talking",
+    "baat band",
+    "bolna band",
+    "ab mat bol",
+    "mat bol",
+}
+
+RESUME_WORDS = {
+    "you can talk",
+    "u can talk",
+    "you can speak",
+    "talk now",
+    "speak now",
+    "start talking",
+    "baat kar sakta hai",
+    "tu ab baat kar sakta hai",
+    "ab baat kar",
+    "ab bol",
+    "bol sakta hai",
+    "chal baat kar",
+    "chal bol",
+}
+
 EXIT_LISTENING_WORDS = {
     "goodbye",
     "good bye",
@@ -180,6 +214,8 @@ def normalize_setting_value(key, value):
     if key in {"voice_energy_threshold"}:
         return str(max(50, int(float(value))))
     if key == "voice_spoken_confirmations":
+        return "true" if parse_bool(value) else "false"
+    if key == "voice_quiet":
         return "true" if parse_bool(value) else "false"
     return value
 
@@ -269,6 +305,28 @@ def is_repeat_command(text):
 def is_stop_speaking_command(text):
     clean = clean_transcript(text)
     return clean in STOP_SPEAKING_WORDS or any(clean.startswith(word + " ") for word in STOP_SPEAKING_WORDS)
+
+
+def is_quiet_command(text):
+    clean = clean_transcript(text)
+    return clean in QUIET_WORDS or any(word in clean for word in QUIET_WORDS)
+
+
+def is_resume_command(text):
+    clean = clean_transcript(text)
+    return clean in RESUME_WORDS or any(word in clean for word in RESUME_WORDS)
+
+
+def set_voice_quiet(enabled):
+    ensure_db()
+    value = "true" if enabled else "false"
+    storage.set_setting("voice_quiet", value)
+    return value
+
+
+def is_voice_quiet(settings=None):
+    settings = settings or get_settings()
+    return parse_bool(settings.get("voice_quiet", "false"))
 
 
 def is_exit_listening_command(text):

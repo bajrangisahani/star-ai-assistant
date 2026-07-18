@@ -137,6 +137,9 @@ def speak(text):
     if not text:
         return False
 
+    if star_voice.is_voice_quiet():
+        return False
+
     text = adapt_reply_for_context(str(text))
 
     if current_process and current_process.poll() is None:
@@ -1581,6 +1584,15 @@ def handle_integrations_command(command):
 # ------------------- VOICE AGENT -------------------
 
 def handle_voice_command(command):
+    if star_voice.is_quiet_command(command):
+        star_voice.set_voice_quiet(True)
+        stop_speaking()
+        return "Theek hai, main chup ho gaya. Jab bolna ho, say ok star you can talk."
+
+    if star_voice.is_resume_command(command):
+        star_voice.set_voice_quiet(False)
+        return "Theek hai bhai, ab main baat kar sakta hoon."
+
     parsed = star_voice.parse_voice_command(command)
     if not parsed:
         return None
@@ -2744,6 +2756,23 @@ def ask_star(user_text):
             speak(reply)
             return record_interaction(text, "runtime", "ok", reply)
 
+        if star_voice.is_resume_command(text):
+            star_voice.set_voice_quiet(False)
+            reply = "Theek hai bhai, ab main baat kar sakta hoon."
+            speak(reply)
+            return record_interaction(text, "voice", "ok", reply)
+
+        if star_voice.is_quiet_command(text):
+            star_voice.set_voice_quiet(True)
+            stop_speaking()
+            reply = "Theek hai, main chup ho gaya. Jab bolna ho, say ok star you can talk."
+            return record_interaction(text, "voice", "ok", reply)
+
+        if star_voice.is_voice_quiet():
+            storage.add_command(text, "voice", "quiet", "")
+            storage.add_log("info", "voice_quiet_ignored", {"command": text})
+            return ""
+
         confirmation_reply = handle_confirmation_command(text)
         if confirmation_reply:
             speak(confirmation_reply)
@@ -2953,6 +2982,7 @@ def voice_update_settings(
     spoken_confirmations: Optional[bool] = None,
     wake_engine: Optional[str] = None,
     wake_phrases: Optional[str] = None,
+    voice_quiet: Optional[bool] = None,
     tts_voice: Optional[str] = None,
     tts_rate: Optional[str] = None,
     tts_pitch: Optional[str] = None,
@@ -2966,6 +2996,7 @@ def voice_update_settings(
         voice_pause_threshold=pause_threshold,
         voice_energy_threshold=energy_threshold,
         voice_spoken_confirmations=spoken_confirmations,
+        voice_quiet=voice_quiet,
         wake_engine=wake_engine,
         wake_phrases=wake_phrases,
         tts_voice=tts_voice,
@@ -2984,6 +3015,21 @@ def voice_update_settings(
 def voice_remember(command: str, reply: str = ""):
     star_voice.remember_interaction(command, reply)
     return {"status": "saved", **star_voice.last_voice_state()}
+
+
+@app.post("/voice/quiet")
+def voice_quiet():
+    stop_speaking()
+    star_voice.set_voice_quiet(True)
+    return {"status": "quiet", "voice_quiet": True}
+
+
+@app.post("/voice/resume")
+def voice_resume():
+    star_voice.set_voice_quiet(False)
+    reply = "Theek hai bhai, ab main baat kar sakta hoon."
+    speak(reply)
+    return {"status": "resumed", "voice_quiet": False, "reply": reply}
 
 
 @app.post("/voice/repeat")

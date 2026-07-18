@@ -64,6 +64,23 @@ def handle_spoken_command(command, used_language=None):
     language = f" ({used_language})" if used_language else ""
     print(f"You said{language}:", command)
 
+    settings = star_voice.get_settings()
+    if star_voice.is_voice_quiet(settings):
+        if star_voice.is_resume_command(command):
+            print("Resuming STAR voice conversation.")
+            call_star("/voice/resume", method="post")
+            conversation_mode = True
+            return
+        print("STAR is quiet. Ignoring command until resume phrase.")
+        conversation_mode = False
+        return
+
+    if star_voice.is_quiet_command(command):
+        print("Putting STAR in quiet mode.")
+        call_star("/voice/quiet", method="post")
+        conversation_mode = False
+        return
+
     if star_voice.is_stop_speaking_command(command):
         print("Stopping speech...")
         call_star("/stop")
