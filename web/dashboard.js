@@ -241,6 +241,7 @@ function renderHistory(items) {
 function renderVoice(voice) {
   const settings = voice.settings || {};
   $("#voiceLanguage").value = settings.voice_language || "auto";
+  $("#responseLanguage").value = settings.response_language || "auto";
   $("#voiceMode").value = settings.voice_mode || "conversation";
   $("#wakeEngine").value = settings.wake_engine || "auto";
   $("#wakePhrases").value = settings.wake_phrases || "hello star,hey star,star,sitar,sitara";
@@ -258,6 +259,7 @@ function renderVoice(voice) {
     ["Quiet", checked(settings.voice_quiet) ? "on" : "off"],
     ["Wake", settings.wake_engine || "auto"],
     ["Language", settings.voice_language || "auto"],
+    ["Reply", settings.response_language || "auto"],
     ["Fallback", (voice.recognition_languages || []).join(", ") || "en-IN, hi-IN, en-US"],
     ["Timeout", `${settings.voice_timeout || 5}s`],
     ["Phrase", `${settings.voice_phrase_time_limit || 6}s`],
@@ -577,6 +579,7 @@ function bindEvents() {
     event.preventDefault();
     const params = new URLSearchParams({
       language: $("#voiceLanguage").value,
+      response_language: $("#responseLanguage").value,
       mode: $("#voiceMode").value,
       wake_engine: $("#wakeEngine").value,
       wake_phrases: $("#wakePhrases").value,

@@ -69,6 +69,32 @@ def fallback_adapt(reply, user_text):
     return reply
 
 
+def force_english_reply(reply):
+    text = str(reply or "").strip()
+    if not text:
+        return text
+    replacements = [
+        (r"\bho gaya bhai\b", "Done"),
+        (r"\bho gaya\b", "Done"),
+        (r"\btheek hai bhai\b", "Okay"),
+        (r"\btheek hai\b", "Okay"),
+        (r"\bhaan bhai\b", "Yes"),
+        (r"\bhaan\b", "Yes"),
+        (r"\bab main\b", "now I"),
+        (r"\bmain\b", "I"),
+        (r"\bbaat karunga\b", "will speak"),
+        (r"\bbaat kar sakta hoon\b", "can speak"),
+        (r"\bchup ho gaya\b", "am quiet"),
+        (r"\bbhai\b", ""),
+    ]
+    clean = text
+    for pattern, replacement in replacements:
+        clean = re.sub(pattern, replacement, clean, flags=re.IGNORECASE)
+    clean = re.sub(r"\s+", " ", clean).strip()
+    clean = clean.replace(" ,", ",").replace(" .", ".")
+    return clean or text
+
+
 def style_instruction(language_hint):
     if language_hint == "Hinglish":
         return """
@@ -95,7 +121,7 @@ Examples:
     return "Use a natural, native-sounding conversational style for that language."
 
 
-def adapt_reply(reply, user_text, client=None):
+def adapt_reply(reply, user_text, client=None, forced_language=None):
     clean_reply = str(reply or "").strip()
     if not should_adapt(clean_reply):
         return clean_reply
@@ -103,13 +129,18 @@ def adapt_reply(reply, user_text, client=None):
     if not client:
         return fallback_adapt(clean_reply, user_text)
 
-    language_hint = detect_language_hint(user_text)
+    language_hint = forced_language.title() if forced_language else detect_language_hint(user_text)
     emotion = detect_emotion(user_text)
+    language_rule = (
+        f"Reply in {language_hint} regardless of the user's input language."
+        if forced_language
+        else "Reply in the same language/script as the user's message. If the user uses Japanese, reply in Japanese. If Hinglish, reply in Hinglish."
+    )
     prompt = f"""
 Rewrite STAR's reply for the user.
 
 Rules:
-- Reply in the same language/script as the user's message. If the user uses Japanese, reply in Japanese. If Hinglish, reply in Hinglish.
+- {language_rule}
 - Match the user's emotional tone: {emotion}.
 - Keep the meaning and facts exactly the same.
 - Keep it short and natural.

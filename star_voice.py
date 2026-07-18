@@ -6,6 +6,7 @@ import star_storage as storage
 DEFAULT_SETTINGS = {
     "voice_mode": "conversation",
     "voice_language": "auto",
+    "response_language": "auto",
     "voice_primary_language": "en-IN",
     "voice_timeout": "5",
     "voice_phrase_time_limit": "6",
@@ -30,6 +31,46 @@ LANGUAGE_ALIASES = {
     "hinglish": "auto",
     "mix": "auto",
     "mixed": "auto",
+}
+
+RESPONSE_LANGUAGE_ALIASES = {
+    "auto": "auto",
+    "same": "auto",
+    "same language": "auto",
+    "english": "english",
+    "en": "english",
+    "hindi": "hindi",
+    "hi": "hindi",
+    "hinglish": "hinglish",
+    "mix": "hinglish",
+    "mixed": "hinglish",
+}
+
+LANGUAGE_PROFILES = {
+    "english": {
+        "response_language": "english",
+        "voice_language": "en-IN",
+        "voice_primary_language": "en-IN",
+        "tts_voice": "en-US-JennyNeural",
+    },
+    "hindi": {
+        "response_language": "hindi",
+        "voice_language": "hi-IN",
+        "voice_primary_language": "hi-IN",
+        "tts_voice": "hi-IN-SwaraNeural",
+    },
+    "hinglish": {
+        "response_language": "hinglish",
+        "voice_language": "auto",
+        "voice_primary_language": "en-IN",
+        "tts_voice": "en-IN-NeerjaNeural",
+    },
+    "auto": {
+        "response_language": "auto",
+        "voice_language": "auto",
+        "voice_primary_language": "en-IN",
+        "tts_voice": "en-US-JennyNeural",
+    },
 }
 
 RECOGNITION_FALLBACKS = {
@@ -192,6 +233,11 @@ def get_settings():
 
 def update_settings(**kwargs):
     ensure_db()
+    profile = language_profile(kwargs.get("response_language")) if kwargs.get("response_language") else None
+    if profile:
+        for key, value in profile.items():
+            if kwargs.get(key) is None:
+                kwargs[key] = value
     updated = {}
     for key, value in kwargs.items():
         if value is None:
@@ -211,6 +257,8 @@ def normalize_setting_value(key, value):
         return clean if clean in {"auto", "speech", "picovoice"} else "auto"
     if key in {"voice_language", "voice_primary_language"}:
         return LANGUAGE_ALIASES.get(value.lower(), value)
+    if key == "response_language":
+        return RESPONSE_LANGUAGE_ALIASES.get(value.lower(), value)
     if key in {"voice_timeout", "voice_phrase_time_limit"}:
         return str(max(1, int(float(value))))
     if key in {"voice_pause_threshold"}:
@@ -360,9 +408,27 @@ def format_settings(settings=None):
     return (
         f"Voice mode is {settings['voice_mode']}. "
         f"Wake engine is {settings.get('wake_engine', 'auto')}. "
-        f"Language is {settings['voice_language']} with fallback {languages}. "
+        f"Listening language is {settings['voice_language']} with fallback {languages}. "
+        f"Reply language is {settings.get('response_language', 'auto')}. "
         f"Listening timeout is {settings['voice_timeout']} seconds."
     )
+
+
+def language_profile(language):
+    clean = RESPONSE_LANGUAGE_ALIASES.get(normalize_text(language), normalize_text(language))
+    return LANGUAGE_PROFILES.get(clean)
+
+
+def response_language_instruction(settings=None):
+    settings = settings or get_settings()
+    language = settings.get("response_language", "auto")
+    if language == "english":
+        return "Always reply in natural English, even if the user's command is Hinglish or Hindi."
+    if language == "hindi":
+        return "Always reply in normal spoken Hindi, not textbook Hindi."
+    if language == "hinglish":
+        return "Always reply in natural Indian Hinglish, like a helpful friend."
+    return "Reply in the same language/script as the user's message."
 
 
 def parse_voice_command(command):
@@ -376,6 +442,39 @@ def parse_voice_command(command):
             if text.startswith(phrase):
                 language = text[len(phrase):].strip()
                 return {"action": "set", "voice_language": LANGUAGE_ALIASES.get(language, language)}
+    language_requests = [
+        "talk in",
+        "speak in",
+        "reply in",
+        "answer in",
+        "talk",
+        "speak",
+        "reply",
+        "answer",
+        "baat kar",
+        "me baat kar",
+        "mein baat kar",
+    ]
+    for phrase in language_requests:
+        if text.startswith(phrase + " "):
+            language = text[len(phrase):].strip()
+            profile = language_profile(language)
+            if profile:
+                return {"action": "set_language_profile", **profile}
+    language_suffixes = [
+        ("english me baat kar", "english"),
+        ("english mein baat kar", "english"),
+        ("english bol", "english"),
+        ("hindi me baat kar", "hindi"),
+        ("hindi mein baat kar", "hindi"),
+        ("hindi bol", "hindi"),
+        ("hinglish me baat kar", "hinglish"),
+        ("hinglish mein baat kar", "hinglish"),
+        ("hinglish bol", "hinglish"),
+    ]
+    for phrase, language in language_suffixes:
+        if text == phrase:
+            return {"action": "set_language_profile", **LANGUAGE_PROFILES[language]}
     if text.startswith(("voice mode", "set voice mode")):
         for phrase in ["set voice mode", "voice mode"]:
             if text.startswith(phrase):
@@ -386,5 +485,5 @@ def parse_voice_command(command):
                 return {"action": "set", "wake_engine": text[len(phrase):].strip()}
     if text in {"hindi mode", "hinglish mode", "english mode"}:
         language = text.replace(" mode", "")
-        return {"action": "set", "voice_language": LANGUAGE_ALIASES.get(language, language)}
+        return {"action": "set_language_profile", **LANGUAGE_PROFILES[language]}
     return None

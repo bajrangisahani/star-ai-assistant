@@ -125,12 +125,17 @@ def search_internet(query):
 # ------------------- TTS -------------------
 
 def adapt_reply_for_context(reply, user_text=None):
+    settings = star_voice.get_settings()
+    response_language = settings.get("response_language", "auto")
+    if response_language == "english":
+        return star_emotion.force_english_reply(reply)
     context = user_text or SPEECH_CONTEXT
     if not context:
         return str(reply or "")
-    key = (str(context), str(reply or ""))
+    key = (response_language, str(context), str(reply or ""))
     if key not in ADAPTED_REPLY_CACHE:
-        ADAPTED_REPLY_CACHE[key] = star_emotion.adapt_reply(reply, context, client=client)
+        forced_language = None if response_language == "auto" else response_language
+        ADAPTED_REPLY_CACHE[key] = star_emotion.adapt_reply(reply, context, client=client, forced_language=forced_language)
     return ADAPTED_REPLY_CACHE[key]
 
 
@@ -1817,14 +1822,13 @@ def handle_voice_command(command):
         last = star_voice.last_voice_state().get("last_reply")
         if not last:
             return "I do not have a voice reply to repeat yet."
-        speak(last)
         return last
 
     if action == "set":
         updates = {
             key: value
             for key, value in parsed.items()
-            if (key.startswith("voice_") or key.startswith("wake_")) and value
+            if (key.startswith("voice_") or key.startswith("wake_") or key in {"response_language", "tts_voice"}) and value
         }
         if not updates:
             return "Tell me which voice setting to change."
@@ -1832,6 +1836,24 @@ def handle_voice_command(command):
         if not changed:
             return "I could not update that voice setting."
         return "Voice settings updated. " + star_voice.format_settings()
+
+    if action == "set_language_profile":
+        updates = {
+            key: value
+            for key, value in parsed.items()
+            if key in {"response_language", "voice_language", "voice_primary_language", "tts_voice"} and value
+        }
+        changed = star_voice.update_settings(**updates)
+        if not changed:
+            return "I could not update that language setting."
+        language = changed.get("response_language", "auto")
+        if language == "english":
+            return "Done. I will speak in English now."
+        if language == "hindi":
+            return "Theek hai. Ab main Hindi me baat karunga."
+        if language == "hinglish":
+            return "Ho gaya bhai. Ab main Hinglish me baat karunga."
+        return "Done. I will follow your language automatically."
 
     return None
 
@@ -2219,6 +2241,31 @@ def detect_tool_without_ai(user_text):
         "voice language",
         "set voice language",
         "speech language",
+        "talk in",
+        "speak in",
+        "reply in",
+        "answer in",
+        "talk english",
+        "speak english",
+        "reply english",
+        "answer english",
+        "talk hindi",
+        "speak hindi",
+        "reply hindi",
+        "answer hindi",
+        "talk hinglish",
+        "speak hinglish",
+        "reply hinglish",
+        "answer hinglish",
+        "english me baat kar",
+        "english mein baat kar",
+        "english bol",
+        "hindi me baat kar",
+        "hindi mein baat kar",
+        "hindi bol",
+        "hinglish me baat kar",
+        "hinglish mein baat kar",
+        "hinglish bol",
         "voice mode",
         "set voice mode",
         "hindi mode",
@@ -3074,6 +3121,11 @@ def ask_star(user_text):
             storage.add_log("info", "voice_quiet_ignored", {"command": text})
             return ""
 
+        voice_reply = handle_voice_command(text)
+        if voice_reply:
+            speak(voice_reply)
+            return record_interaction(text, "voice", "ok", voice_reply, adapt=False)
+
         confirmation_reply = handle_confirmation_command(text)
         if confirmation_reply:
             speak(confirmation_reply)
@@ -3105,7 +3157,9 @@ def ask_star(user_text):
             else:
                 tool_reply = run_tool(tool, action_text)
             if tool_reply:
-                if PENDING_CONFIRMATION and star_voice.parse_bool(star_voice.get_settings().get("voice_spoken_confirmations")):
+                if tool == "voice" or (
+                    PENDING_CONFIRMATION and star_voice.parse_bool(star_voice.get_settings().get("voice_spoken_confirmations"))
+                ):
                     speak(tool_reply)
                 return record_interaction(text, tool, "ok", tool_reply)
 
@@ -3140,7 +3194,7 @@ Internet data:
 
 Rules:
 Reply short and natural.
-Detect the user's language and reply in the same language/script.
+{star_voice.response_language_instruction()}
 Detect the user's emotional tone and match it with empathy.
 If the user is excited, sound excited. If frustrated, be calm and helpful. If sad, be gentle.
 For Hinglish, reply like a real Indian friend: simple, warm, casual, not formal textbook Hindi.
@@ -3280,6 +3334,7 @@ def voice_get_settings():
 def voice_update_settings(
     mode: Optional[str] = None,
     language: Optional[str] = None,
+    response_language: Optional[str] = None,
     primary_language: Optional[str] = None,
     timeout: Optional[float] = None,
     phrase_time_limit: Optional[float] = None,
@@ -3296,6 +3351,7 @@ def voice_update_settings(
     changed = star_voice.update_settings(
         voice_mode=mode,
         voice_language=language,
+        response_language=response_language,
         voice_primary_language=primary_language,
         voice_timeout=timeout,
         voice_phrase_time_limit=phrase_time_limit,

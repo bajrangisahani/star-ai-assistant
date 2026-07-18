@@ -108,6 +108,9 @@ After `install_startup.ps1`, STAR starts automatically when the Windows user log
 | Say this | Result |
 | --- | --- |
 | `hello star` | Wake STAR and start command mode |
+| `talk in english` / `english me baat kar` | Force English replies and English TTS profile |
+| `talk in hindi` / `hindi me baat kar` | Force Hindi replies and Hindi TTS profile |
+| `talk in hinglish` / `hinglish me baat kar` | Force Hinglish replies and Indian English TTS profile |
 | `stop` | Stop current speech only, server stays on |
 | `repeat` or `dobara bolo` | Repeat last response |
 | `star u can sleep` / `star sleep` / `star so ja` | Exit command mode and keep wake listening alive |
