@@ -4,7 +4,8 @@ STAR is a local voice assistant for Windows. It listens for the custom wake word
 
 ## Features
 
-- Wake word activation with Picovoice Porcupine.
+- Free keyless wake activation with speech phrases such as `hello star`, `hey star`, and `star`.
+- Optional Picovoice Porcupine wake word support if you install `pvporcupine` and provide an AccessKey.
 - Continuous speech recognition after wake word detection.
 - Background runtime scripts for duplicate-safe start, status, manual stop, and Windows logon auto-start.
 - Voice brain settings for language fallback, listening timeout, phrase length, TTS voice/rate/pitch, repeat, stop, sleep, and spoken confirmation shortcuts.
@@ -69,10 +70,11 @@ pip install -r requirements.txt
 
 ```env
 GROQ_API_KEY=your_groq_key
-PICOVOICE_ACCESS_KEY=your_picovoice_key
 EMAIL_ADDRESS=your_email_address
 EMAIL_APP_PASSWORD=your_email_app_password
 ```
+
+`PICOVOICE_ACCESS_KEY` is optional now. Without it, STAR uses the free keyless speech wake mode.
 
 4. Start STAR manually.
 
@@ -110,7 +112,7 @@ Voice behavior:
 - `sleep` exits conversation mode and keeps wake-word listening alive.
 - `stop server`, `close backend`, and similar commands are blocked from voice so the server stays on.
 - To fully stop STAR manually, use `.\scripts\stop_star.ps1`.
-- If `status_star.ps1` shows `PorcupineActivationRefusedError`, update `PICOVOICE_ACCESS_KEY` in `.env` with a valid Picovoice key and run `.\scripts\start_star.ps1` again.
+- If Picovoice fails or no key is configured, STAR falls back to free keyless speech wake mode.
 
 ## Useful Commands
 
@@ -202,6 +204,7 @@ Voice behavior:
 - `voice language hindi`
 - `voice language hinglish`
 - `voice language english`
+- `wake engine speech`
 - `repeat`
 - `dobara bolo`
 - `stop`

@@ -184,6 +184,18 @@
                   </select>
                 </label>
                 <label>
+                  <span>Wake Engine</span>
+                  <select id="wakeEngine">
+                    <option value="auto">Auto</option>
+                    <option value="speech">Free Speech</option>
+                    <option value="picovoice">Picovoice</option>
+                  </select>
+                </label>
+                <label>
+                  <span>Wake Phrases</span>
+                  <input id="wakePhrases" type="text" />
+                </label>
+                <label>
                   <span>Timeout</span>
                   <input id="voiceTimeout" type="number" min="1" max="20" step="1" />
                 </label>

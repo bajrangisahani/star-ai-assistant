@@ -1442,7 +1442,11 @@ def handle_voice_command(command):
         return last
 
     if action == "set":
-        updates = {key: value for key, value in parsed.items() if key.startswith("voice_") and value}
+        updates = {
+            key: value
+            for key, value in parsed.items()
+            if (key.startswith("voice_") or key.startswith("wake_")) and value
+        }
         if not updates:
             return "Tell me which voice setting to change."
         changed = star_voice.update_settings(**updates)
@@ -2780,6 +2784,8 @@ def voice_update_settings(
     pause_threshold: Optional[float] = None,
     energy_threshold: Optional[int] = None,
     spoken_confirmations: Optional[bool] = None,
+    wake_engine: Optional[str] = None,
+    wake_phrases: Optional[str] = None,
     tts_voice: Optional[str] = None,
     tts_rate: Optional[str] = None,
     tts_pitch: Optional[str] = None,
@@ -2793,6 +2799,8 @@ def voice_update_settings(
         voice_pause_threshold=pause_threshold,
         voice_energy_threshold=energy_threshold,
         voice_spoken_confirmations=spoken_confirmations,
+        wake_engine=wake_engine,
+        wake_phrases=wake_phrases,
         tts_voice=tts_voice,
         tts_rate=tts_rate,
         tts_pitch=tts_pitch,

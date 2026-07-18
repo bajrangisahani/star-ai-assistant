@@ -241,6 +241,8 @@ function renderVoice(voice) {
   const settings = voice.settings || {};
   $("#voiceLanguage").value = settings.voice_language || "auto";
   $("#voiceMode").value = settings.voice_mode || "conversation";
+  $("#wakeEngine").value = settings.wake_engine || "auto";
+  $("#wakePhrases").value = settings.wake_phrases || "hello star,hey star,star,sitar,sitara";
   $("#voiceTimeout").value = settings.voice_timeout || "5";
   $("#voicePhraseLimit").value = settings.voice_phrase_time_limit || "6";
   $("#voicePause").value = settings.voice_pause_threshold || "0.8";
@@ -252,6 +254,7 @@ function renderVoice(voice) {
 
   const items = [
     ["Mode", settings.voice_mode || "conversation"],
+    ["Wake", settings.wake_engine || "auto"],
     ["Language", settings.voice_language || "auto"],
     ["Fallback", (voice.recognition_languages || []).join(", ") || "en-IN, hi-IN, en-US"],
     ["Timeout", `${settings.voice_timeout || 5}s`],
@@ -489,6 +492,8 @@ function bindEvents() {
     const params = new URLSearchParams({
       language: $("#voiceLanguage").value,
       mode: $("#voiceMode").value,
+      wake_engine: $("#wakeEngine").value,
+      wake_phrases: $("#wakePhrases").value,
       timeout: $("#voiceTimeout").value,
       phrase_time_limit: $("#voicePhraseLimit").value,
       pause_threshold: $("#voicePause").value,

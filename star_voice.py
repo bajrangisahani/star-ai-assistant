@@ -12,6 +12,8 @@ DEFAULT_SETTINGS = {
     "voice_pause_threshold": "0.8",
     "voice_energy_threshold": "300",
     "voice_spoken_confirmations": "true",
+    "wake_engine": "auto",
+    "wake_phrases": "hello star,hey star,star,sitar,sitara",
     "tts_voice": "en-US-GuyNeural",
     "tts_rate": "+5%",
     "tts_pitch": "+0Hz",
@@ -166,6 +168,9 @@ def update_settings(**kwargs):
 
 def normalize_setting_value(key, value):
     value = str(value).strip()
+    if key == "wake_engine":
+        clean = value.lower()
+        return clean if clean in {"auto", "speech", "picovoice"} else "auto"
     if key in {"voice_language", "voice_primary_language"}:
         return LANGUAGE_ALIASES.get(value.lower(), value)
     if key in {"voice_timeout", "voice_phrase_time_limit"}:
@@ -179,11 +184,38 @@ def normalize_setting_value(key, value):
     return value
 
 
-def clean_transcript(text):
+def normalize_text(text):
     clean = str(text or "").lower().strip()
-    clean = clean.replace("’", "'").replace("`", "'")
+    clean = clean.replace("`", "'")
     clean = re.sub(r"[^\w\s'.-]", " ", clean)
-    clean = re.sub(r"\s+", " ", clean).strip()
+    return re.sub(r"\s+", " ", clean).strip()
+
+
+def wake_phrases(settings=None):
+    settings = settings or get_settings()
+    phrases = str(settings.get("wake_phrases") or DEFAULT_SETTINGS["wake_phrases"])
+    return [normalize_text(item) for item in phrases.split(",") if normalize_text(item)]
+
+
+def detect_wake_phrase(text, settings=None):
+    clean = normalize_text(text)
+    for phrase in wake_phrases(settings):
+        if clean == phrase or clean.startswith(phrase + " "):
+            return phrase
+    return None
+
+
+def command_after_wake(text, settings=None):
+    clean = normalize_text(text)
+    phrase = detect_wake_phrase(clean, settings=settings)
+    if not phrase:
+        return ""
+    return clean[len(phrase):].strip()
+
+
+def clean_transcript(text):
+    clean = normalize_text(text)
+    clean = clean.replace("’", "'").replace("`", "'")
 
     wake_prefixes = [
         "hello star",
@@ -265,6 +297,7 @@ def format_settings(settings=None):
     languages = ", ".join(recognition_languages(settings))
     return (
         f"Voice mode is {settings['voice_mode']}. "
+        f"Wake engine is {settings.get('wake_engine', 'auto')}. "
         f"Language is {settings['voice_language']} with fallback {languages}. "
         f"Listening timeout is {settings['voice_timeout']} seconds."
     )
@@ -285,6 +318,10 @@ def parse_voice_command(command):
         for phrase in ["set voice mode", "voice mode"]:
             if text.startswith(phrase):
                 return {"action": "set", "voice_mode": text[len(phrase):].strip()}
+    if text.startswith(("wake engine", "set wake engine")):
+        for phrase in ["set wake engine", "wake engine"]:
+            if text.startswith(phrase):
+                return {"action": "set", "wake_engine": text[len(phrase):].strip()}
     if text in {"hindi mode", "hinglish mode", "english mode"}:
         language = text.replace(" mode", "")
         return {"action": "set", "voice_language": LANGUAGE_ALIASES.get(language, language)}

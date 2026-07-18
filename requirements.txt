@@ -8,7 +8,6 @@ playsound==1.2.2
 psutil==7.2.2
 pypdf==6.14.2
 PyPDF2==3.0.1
-pvporcupine==4.0.2
 PyAudio==0.2.14
 PyAutoGUI==0.9.54
 pytesseract==0.3.13
