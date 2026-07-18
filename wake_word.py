@@ -75,6 +75,12 @@ def handle_spoken_command(command, used_language=None):
         conversation_mode = False
         return
 
+    if star_voice.is_exit_listening_command(command):
+        print("Entering wake-only sleep mode.")
+        call_star("/voice/sleep", method="post")
+        conversation_mode = False
+        return
+
     if star_voice.is_quiet_command(command):
         print("Putting STAR in quiet mode.")
         call_star("/voice/quiet", method="post")
@@ -95,11 +101,6 @@ def handle_spoken_command(command, used_language=None):
     if confirmation:
         print("Confirmation intent:", confirmation)
         call_star("/ask-star", params={"q": confirmation})
-        return
-
-    if star_voice.is_exit_listening_command(command):
-        print("Exiting conversation mode.")
-        conversation_mode = False
         return
 
     response = call_star("/ask-star", params={"q": command})

@@ -112,8 +112,6 @@ QUIET_WORDS = {
     "chup ho ja",
     "band hoja",
     "band ho ja",
-    "sleep",
-    "so ja",
     "quiet",
     "be quiet",
     "stop talking",
@@ -146,11 +144,17 @@ EXIT_LISTENING_WORDS = {
     "bye star",
     "exit",
     "sleep",
+    "u can sleep",
+    "you can sleep",
+    "star can sleep",
     "go to sleep",
     "stop listening",
     "listening band",
     "sunna band",
+    "command sunna band",
     "so ja",
+    "ab so ja",
+    "sleep mode",
 }
 
 REPEAT_WORDS = {

@@ -2726,8 +2726,9 @@ def check_direct_memory(user_text):
 
 # ------------------- MAIN AI LOGIC -------------------
 
-def record_interaction(user_text, tool, status, reply):
-    reply = adapt_reply_for_context(reply, user_text=user_text)
+def record_interaction(user_text, tool, status, reply, adapt=True):
+    if adapt:
+        reply = adapt_reply_for_context(reply, user_text=user_text)
     storage.add_command(user_text, tool, status, reply)
     storage.add_conversation("assistant", reply)
     star_voice.remember_interaction(user_text, reply)
@@ -2760,13 +2761,19 @@ def ask_star(user_text):
             star_voice.set_voice_quiet(False)
             reply = "Theek hai bhai, ab main baat kar sakta hoon."
             speak(reply)
-            return record_interaction(text, "voice", "ok", reply)
+            return record_interaction(text, "voice", "ok", reply, adapt=False)
+
+        if star_voice.is_exit_listening_command(text):
+            star_voice.set_voice_quiet(False)
+            stop_speaking()
+            reply = "Theek hai bhai, main sleep mode me hoon. Hello star bolo, fir main sununga."
+            return record_interaction(text, "voice", "sleep", reply, adapt=False)
 
         if star_voice.is_quiet_command(text):
             star_voice.set_voice_quiet(True)
             stop_speaking()
             reply = "Theek hai, main chup ho gaya. Jab bolna ho, say ok star you can talk."
-            return record_interaction(text, "voice", "ok", reply)
+            return record_interaction(text, "voice", "ok", reply, adapt=False)
 
         if star_voice.is_voice_quiet():
             storage.add_command(text, "voice", "quiet", "")
@@ -2884,6 +2891,11 @@ def root():
 @app.get("/dashboard")
 def dashboard():
     return FileResponse(WEB_DIR / "dashboard.html")
+
+
+@app.get("/mobile")
+def mobile_app():
+    return FileResponse(WEB_DIR / "mobile.html")
 
 
 @app.get("/ask-star")
@@ -3030,6 +3042,17 @@ def voice_resume():
     reply = "Theek hai bhai, ab main baat kar sakta hoon."
     speak(reply)
     return {"status": "resumed", "voice_quiet": False, "reply": reply}
+
+
+@app.post("/voice/sleep")
+def voice_sleep():
+    star_voice.set_voice_quiet(False)
+    stop_speaking()
+    return {
+        "status": "sleep",
+        "voice_quiet": False,
+        "reply": "Theek hai bhai, main sleep mode me hoon. Hello star bolo, fir main sununga.",
+    }
 
 
 @app.post("/voice/repeat")
@@ -3476,6 +3499,47 @@ def mobile_notifications(status: str = "queued", limit: int = 50):
 @app.get("/mobile/pull")
 def mobile_pull(secret: Optional[str] = None, limit: int = 20):
     return star_integrations.mobile_pull(secret=secret, limit=limit)
+
+
+@app.get("/mobile/status")
+def mobile_status(secret: Optional[str] = None):
+    authorized = star_integrations.validate_mobile_secret(secret)
+    if not authorized:
+        storage.add_log("warning", "mobile_auth_failed", {"endpoint": "status"})
+        return {"authorized": False, "error": "invalid_secret"}
+    voice_settings = star_voice.get_settings()
+    return {
+        "authorized": True,
+        "server": "online",
+        "mobile": star_integrations.integration_status()["mobile"],
+        "voice": {
+            "quiet": star_voice.is_voice_quiet(voice_settings),
+            "wake_phrases": star_voice.wake_phrases(voice_settings),
+            "languages": star_voice.recognition_languages(voice_settings),
+        },
+        "notifications": len(star_integrations.list_mobile_notifications(status="queued", limit=100)),
+        "dashboard": "/dashboard",
+        "mobile_app": "/mobile",
+    }
+
+
+@app.post("/mobile/command")
+def mobile_command(command: str, secret: Optional[str] = None):
+    if not star_integrations.validate_mobile_secret(secret):
+        storage.add_log("warning", "mobile_auth_failed", {"endpoint": "command"})
+        return {"authorized": False, "reply": "", "error": "invalid_secret"}
+    reply = ask_star(command)
+    settings = star_voice.get_settings()
+    return {
+        "authorized": True,
+        "reply": reply,
+        "voice": {
+            "quiet": star_voice.is_voice_quiet(settings),
+            "sleep_requested": star_voice.is_exit_listening_command(command),
+            "resume_requested": star_voice.is_resume_command(command),
+        },
+        "last": star_voice.last_voice_state(),
+    }
 
 
 @app.post("/mobile/notifications")

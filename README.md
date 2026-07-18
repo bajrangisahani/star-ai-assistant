@@ -36,13 +36,13 @@ STAR is a local voice assistant for Windows. It listens for the custom wake word
 - Hinglish-friendly voice cleanup for common misheard words such as confirm/cancel, plus English/Hindi recognition fallback.
 - Worldwide same-language response adaptation for natural conversation tone and emotion matching.
 - Self-learning smart suggestions from usage patterns, tasks, reminders, health, finance, and recent errors.
-- Cloud/mobile/smart-home foundation with local cloud snapshots, mobile notification queue, integration registry, and Home Assistant hooks.
+- Cloud/mobile/smart-home foundation with local cloud snapshots, mobile companion page, notification queue, integration registry, and Home Assistant hooks.
 - Browser tab controls, Google/DuckDuckGo search, and file download helper.
 - Media controls for play/pause, next/previous, YouTube, Spotify, Netflix, and VLC.
 - WhatsApp chat search/send helpers through WhatsApp Web.
 - WhatsApp persistent Chrome profile, login status checks, and better Selenium waits for WhatsApp Web.
 - Email IMAP/SMTP connection diagnostics, timeout settings, and retry handling.
-- Mobile pull endpoint with optional shared-secret auth for queued notifications.
+- Mobile companion at `/mobile` with wake listening, command sending, mobile speech replies, notifications, and optional shared-secret auth.
 - Smart-home validation and retry handling for Home Assistant service calls.
 - Coding helper for project analysis, code search, explain/review file, and Python compile checks.
 - Git helper for status, log, diff, branch, remotes, and confirmed commit/pull/push.
@@ -93,6 +93,14 @@ This starts the backend and wake-word listener in the background. It is duplicat
 http://127.0.0.1:8000/dashboard
 ```
 
+Mobile companion:
+
+```text
+http://127.0.0.1:8000/mobile
+```
+
+Use the laptop's LAN IP instead of `127.0.0.1` from your phone. Mobile browser microphone wake mode may need a secure browser context depending on the phone/browser.
+
 6. Install auto-start once.
 
 ```powershell
@@ -112,7 +120,9 @@ Useful runtime scripts:
 Voice behavior:
 
 - `stop` stops STAR's current speech only. It does not stop the server.
-- `star abhi chup`, `star band ho ja`, or `star sleep` puts STAR in quiet mode. It keeps listening, but ignores normal conversation.
+- `star u can sleep`, `star sleep`, or `star so ja` exits command mode and keeps wake listening alive.
+- `hello star` wakes STAR again after sleep mode.
+- `star abhi chup` or `star band ho ja` puts STAR in quiet mode. It keeps listening, but ignores normal conversation.
 - `ok star you can talk`, `ok sar u can talk`, or `chal star tu ab baat kar sakta hai` resumes replies.
 - `stop server`, `close backend`, and similar commands are blocked from voice so the server stays on.
 - To fully stop STAR manually, use `.\scripts\stop_star.ps1`.
@@ -353,6 +363,9 @@ Voice behavior:
 - `GET /integrations` - list saved integrations.
 - `DELETE /integrations/1` - delete a saved integration.
 - `POST /cloud/sync` - write a local cloud-sync snapshot.
+- `GET /mobile` - mobile companion page.
+- `GET /mobile/status` - mobile companion status and wake phrases.
+- `POST /mobile/command?command=open chrome` - run a STAR command from mobile.
 - `GET /mobile/notifications` - list queued mobile notifications.
 - `POST /mobile/notifications?title=STAR&body=Hello` - queue a mobile notification.
 - `POST /mobile/notifications/1/read` - mark mobile notification read.

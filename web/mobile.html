@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>STAR Mobile</title>
+    <link rel="stylesheet" href="/static/mobile.css" />
+  </head>
+  <body>
+    <main class="mobile-shell">
+      <header class="hero">
+        <div>
+          <p class="eyebrow">STAR Mobile</p>
+          <h1 id="wakeTitle">Wake only</h1>
+          <p id="statusText">Tap Start Wake, then say hello star.</p>
+        </div>
+        <span class="status-dot" id="statusDot"></span>
+      </header>
+
+      <section class="panel">
+        <div class="wake-pad" id="wakePad">
+          <span id="wakeLabel">Idle</span>
+        </div>
+        <div class="actions">
+          <button class="primary" id="startWakeBtn">Start Wake</button>
+          <button id="sleepBtn">Sleep</button>
+        </div>
+      </section>
+
+      <section class="panel">
+        <form class="command-form" id="commandForm">
+          <input id="commandInput" autocomplete="off" placeholder="Type or speak a STAR command" />
+          <button class="primary" type="submit">Send</button>
+        </form>
+        <div class="reply" id="replyBox">No mobile command yet.</div>
+      </section>
+
+      <section class="panel split">
+        <label>
+          <span>Language</span>
+          <select id="languageSelect">
+            <option value="en-IN">English India</option>
+            <option value="hi-IN">Hindi</option>
+            <option value="en-US">English US</option>
+          </select>
+        </label>
+        <label>
+          <span>Mobile secret</span>
+          <input id="secretInput" type="password" autocomplete="off" placeholder="optional" />
+        </label>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Notifications</h2>
+          <button id="refreshBtn">Refresh</button>
+        </div>
+        <div class="notifications" id="notificationsList"></div>
+      </section>
+    </main>
+    <script src="/static/mobile.js"></script>
+  </body>
+</html>
