@@ -72,6 +72,7 @@ class StarPowerButton:
 
         self.quiet = None
         self.speaking = False
+        self.visible = True
         self.phase = 0
         self.drag_start = None
         self.frame.bind("<ButtonPress-1>", self.start_drag)
@@ -132,6 +133,18 @@ class StarPowerButton:
             self.state_label.config(text="ON", fg="#16745f")
             self.button.config(text="Turn Off", state="normal", bg="#16745f", activebackground="#125f4f")
 
+    def apply_visibility(self, visible):
+        visible = bool(visible)
+        if visible == self.visible:
+            return
+        self.visible = visible
+        if self.visible:
+            self.root.deiconify()
+            self.root.attributes("-topmost", True)
+            self.place_bottom_right()
+        else:
+            self.root.withdraw()
+
     def draw_idle_orb(self, color="#16745f"):
         self.canvas.delete("all")
         self.canvas.create_oval(30, 12, 62, 44, fill=color, outline="")
@@ -168,6 +181,7 @@ class StarPowerButton:
             status = self.request_json("/voice/status")
             settings = status.get("settings", {})
             quiet = checked(settings.get("voice_quiet", "false"))
+            self.apply_visibility(checked(status.get("desktop_button_visible", True)))
             self.set_state(quiet, speaking=checked(status.get("is_speaking", False)))
         except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, OSError):
             self.set_waiting()

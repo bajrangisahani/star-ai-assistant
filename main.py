@@ -164,6 +164,12 @@ def handle_natural_conversation(text):
     if any(phrase in clean for phrase in ["kaise ho", "kaisa hai", "kesa hai", "how are you"]):
         return "Main badhiya hoon bhai. Tu bata, kya chal raha hai?"
 
+    if any(phrase in clean for phrase in ["what are you doing", "kya kar rahe ho", "kya kar rha hai", "kya kar raha hai", "kya chal raha"]):
+        return "Bas bhai, main yahin hoon. Teri baat sun raha hoon aur jo bolega woh handle kar dunga."
+
+    if any(phrase in clean for phrase in ["tum kya kar sakte ho", "what can you do", "kya kya kar sakta"]):
+        return "Main baat kar sakta hoon, info de sakta hoon, apps khol sakta hoon, YouTube chala sakta hoon, aur laptop ke kaafi kaam voice se karwa sakta hoon."
+
     if clean in {"hello", "hello star", "hi", "hey", "star"}:
         return "Haan bhai, bol."
 
@@ -223,6 +229,15 @@ def stop_speaking():
 
 def is_speaking():
     return bool((current_process and current_process.poll() is None) or time.time() < SPEAKING_SIGNAL_UNTIL)
+
+
+def desktop_button_visible():
+    return storage.get_setting("desktop_button_visible", "true").lower() != "false"
+
+
+def set_desktop_button_visible(visible):
+    storage.set_setting("desktop_button_visible", "true" if visible else "false")
+    return desktop_button_visible()
 
 
 # ------------------- BROWSER AUTOMATION -------------------
@@ -2318,6 +2333,17 @@ TOOLS = {
 }
 
 
+SPOKEN_TOOL_REPLIES = {
+    "research",
+    "finance",
+    "health",
+    "analytics",
+    "calendar",
+    "contacts",
+    "productivity",
+}
+
+
 def detect_tool_without_ai(user_text):
     text = user_text.lower().strip()
 
@@ -3346,7 +3372,7 @@ def ask_star(user_text):
             if tool_reply:
                 if tool == "media" and tool_reply.strip().lower() == "hindi ya english?":
                     tool_reply = set_pending_media_request("sad_song")
-                if tool == "voice" or (
+                if tool == "voice" or tool in SPOKEN_TOOL_REPLIES or (
                     PENDING_CONFIRMATION and star_voice.parse_bool(star_voice.get_settings().get("voice_spoken_confirmations"))
                 ):
                     speak(tool_reply)
@@ -3506,8 +3532,29 @@ def voice_status():
         "recognition_languages": star_voice.recognition_languages(),
         "last": star_voice.last_voice_state(),
         "is_speaking": is_speaking(),
+        "desktop_button_visible": desktop_button_visible(),
         "pending_confirmation": PENDING_CONFIRMATION["description"] if PENDING_CONFIRMATION else None,
     }
+
+
+@app.get("/desktop-button/status")
+def desktop_button_status():
+    return {"visible": desktop_button_visible()}
+
+
+@app.post("/desktop-button/show")
+def desktop_button_show():
+    return {"visible": set_desktop_button_visible(True)}
+
+
+@app.post("/desktop-button/hide")
+def desktop_button_hide():
+    return {"visible": set_desktop_button_visible(False)}
+
+
+@app.post("/desktop-button/toggle")
+def desktop_button_toggle():
+    return {"visible": set_desktop_button_visible(not desktop_button_visible())}
 
 
 @app.get("/voice/settings")

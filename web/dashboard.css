@@ -170,7 +170,7 @@ h3 {
   right: 18px;
   bottom: 18px;
   z-index: 50;
-  min-width: 190px;
+  min-width: 260px;
   border: 1px solid rgba(22, 116, 95, 0.35);
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.96);
@@ -180,6 +180,11 @@ h3 {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+}
+
+.power-actions {
+  display: flex;
+  gap: 8px;
 }
 
 .star-power-dock.off {
@@ -216,9 +221,21 @@ h3 {
   white-space: nowrap;
 }
 
+.power-button.secondary {
+  background: white;
+  color: var(--text);
+  border-color: var(--line);
+}
+
 .star-power-dock.off .power-button {
   border-color: var(--danger);
   background: var(--danger);
+}
+
+.star-power-dock.off .power-button.secondary {
+  background: white;
+  color: var(--text);
+  border-color: var(--line);
 }
 
 .view {

@@ -243,13 +243,13 @@ function renderVoice(voice) {
   $("#voiceLanguage").value = settings.voice_language || "auto";
   $("#responseLanguage").value = settings.response_language || "auto";
   $("#voiceMode").value = settings.voice_mode || "conversation";
-  $("#wakeEngine").value = settings.wake_engine || "auto";
+  $("#wakeEngine").value = settings.wake_engine || "speech";
   $("#wakePhrases").value = settings.wake_phrases || "hello star,hey star,star,sitar,sitara";
   $("#voiceTimeout").value = settings.voice_timeout || "5";
-  $("#voicePhraseLimit").value = settings.voice_phrase_time_limit || "6";
-  $("#voicePause").value = settings.voice_pause_threshold || "0.8";
-  $("#voiceEnergy").value = settings.voice_energy_threshold || "300";
-  $("#ttsVoice").value = settings.tts_voice || "en-US-JennyNeural";
+  $("#voicePhraseLimit").value = settings.voice_phrase_time_limit || "8";
+  $("#voicePause").value = settings.voice_pause_threshold || "0.75";
+  $("#voiceEnergy").value = settings.voice_energy_threshold || "650";
+  $("#ttsVoice").value = settings.tts_voice || "en-IN-PrabhatNeural";
   $("#ttsRate").value = settings.tts_rate || "+5%";
   $("#ttsPitch").value = settings.tts_pitch || "+0Hz";
   $("#spokenConfirmations").checked = checked(settings.voice_spoken_confirmations);
@@ -285,10 +285,13 @@ function renderVoice(voice) {
 
 function renderPowerDock(voice) {
   const quiet = checked(voice.settings?.voice_quiet);
+  const desktopVisible = checked(voice.desktop_button_visible ?? true);
   $("#starPowerDock").classList.toggle("off", quiet);
   $("#starPowerState").textContent = quiet ? "OFF" : "ON";
   $("#starPowerBtn").textContent = quiet ? "Turn On" : "Turn Off";
   $("#starPowerBtn").title = quiet ? "Resume STAR replies. Server stays on." : "Put STAR in quiet mode. Server stays on.";
+  $("#desktopButtonToggle").textContent = desktopVisible ? "Hide Button" : "Show Button";
+  $("#desktopButtonToggle").title = desktopVisible ? "Remove the desktop floating button from the screen." : "Bring the desktop floating button back.";
 }
 
 function phonePayloadForAction(action, value) {
@@ -564,6 +567,11 @@ function bindEvents() {
     const isOff = $("#starPowerDock").classList.contains("off");
     const result = await api(isOff ? "/voice/resume" : "/voice/quiet", { method: "POST" });
     if (result.reply) addMessage("assistant", result.reply);
+    await refreshAll();
+  });
+
+  $("#desktopButtonToggle").addEventListener("click", async () => {
+    await api("/desktop-button/toggle", { method: "POST" });
     await refreshAll();
   });
 

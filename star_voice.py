@@ -16,7 +16,7 @@ DEFAULT_SETTINGS = {
     "voice_quiet": "false",
     "wake_engine": "speech",
     "wake_phrases": "hello star,hello,hey star,ok star,okay star,chal star,star,sitar,sitara,hello sir,hello sar,yellow star,halo star,helo star,ok sar,ok sir",
-    "tts_voice": "en-IN-NeerjaNeural",
+    "tts_voice": "en-IN-PrabhatNeural",
     "tts_rate": "+5%",
     "tts_pitch": "+0Hz",
 }
@@ -51,25 +51,25 @@ LANGUAGE_PROFILES = {
         "response_language": "english",
         "voice_language": "en-IN",
         "voice_primary_language": "en-IN",
-        "tts_voice": "en-US-JennyNeural",
+        "tts_voice": "en-IN-PrabhatNeural",
     },
     "hindi": {
         "response_language": "hindi",
         "voice_language": "hi-IN",
         "voice_primary_language": "hi-IN",
-        "tts_voice": "hi-IN-SwaraNeural",
+        "tts_voice": "hi-IN-MadhurNeural",
     },
     "hinglish": {
         "response_language": "hinglish",
         "voice_language": "auto",
         "voice_primary_language": "en-IN",
-        "tts_voice": "en-IN-NeerjaNeural",
+        "tts_voice": "en-IN-PrabhatNeural",
     },
     "auto": {
         "response_language": "auto",
         "voice_language": "auto",
         "voice_primary_language": "en-IN",
-        "tts_voice": "en-US-JennyNeural",
+        "tts_voice": "en-IN-PrabhatNeural",
     },
 }
 
